@@ -5,15 +5,12 @@
 
 import requests
 import sys
+import secrets
+from Crypto.Util.Padding import pad, unpad
 
 def oracle(iv, block, base_url):
     res = requests.get(f'{base_url}/quote/', cookies={'authtoken': iv.hex() + block.hex()})
-    if res.text.startswith("'utf") or res.text.startswith("No"):
-        return True
-    else:
-        return False
-    #print(res.text)
-    #return res.text.startswith("'utf")
+    return res.text.startswith("'utf") or res.text.startswith("No")
 
 def single_block_attack(block, base_url):
     zeroed_iv = [0] * 16
@@ -36,12 +33,12 @@ def single_block_attack(block, base_url):
                 break
         else:
             raise Exception("no valid padding byte found (is the oracle working correctly?)")
-
+        print('plain: ',zeroed_iv)
         zeroed_iv[-pad_val] = candidate ^ pad_val
         print(zeroed_iv)
     return zeroed_iv
 
-def attack(base_url):
+def decAttack(base_url):
     # get cookie from server
     authtoken = requests.get(f'{base_url}').cookies['authtoken']
     # extract cookie and seperate into iv and 16 byte cipherblocks
@@ -59,8 +56,21 @@ def attack(base_url):
         iv = x
     return result
 
+def encAttack(base_url):
+    newPlaintext = 'I should have used authenticated encryption because ... plain CBC is not secure!'
+    c4 = secrets.token_bytes(10)
+    c4 = pad(c4, 16)
+    print(c4)
+    print(len(c4))
+    return single_block_attack(c4, base_url)
+    
+    
+
 if __name__ == '__main__':
     if len(sys.argv) != 2:
         print(f'usage: {sys.argv[0]} <base url>', file=sys.stderr)
         exit(1)
-    print(attack(sys.argv[1]).decode())
+    print(encAttack(sys.argv[1]))
+    #print(type(encAttack(sys.argv[1])).decode())
+    #print(type(decAttack(sys.argv[1])))
+    #print(decAttack(sys.argv[1]))
