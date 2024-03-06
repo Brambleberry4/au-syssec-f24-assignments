@@ -55,23 +55,39 @@ def decAttack(base_url):
 
 def single_block_rec(cBlock, pBlock, base_url):
     cX = single_block_attack(cBlock, base_url)
-    return pBlock ^ cX 
+    cipher = bytes(plain_byte ^ cX_byte for plain_byte, cX_byte in zip(pBlock,cX))
+    return cipher
 
 def encAttack(base_url):
     newPlaintext = f'I should have used authenticated encryption because ... plain CBC is not secure!'.encode()
-    print(newPlaintext)
-    print(len(newPlaintext), type(newPlaintext))
+    #print(newPlaintext)
+    #print(len(newPlaintext), type(newPlaintext))
     plainBlocks = [newPlaintext[i:i+16] for i in range(0, len(newPlaintext), 16)]
-    print(len(plainBlocks), len(plainBlocks[0]))
-    for x in plainBlocks:
-        dec = single_block_attack()
-    c4 = secrets.token_bytes(16)
-    decC4 = single_block_rec(c4, base_url)
-    print(decC4).decode()
-    return single_block_attack(c4, base_url)
+    #print(len(plainBlocks), len(plainBlocks[0]))
+    cipherBlocks = []
+    for x in range(len(plainBlocks)):
+        cipherBlocks.append(secrets.token_bytes(16))
+    print('Cipher:', cipherBlocks)
+    print('Plain:', plainBlocks)
+    for x in reversed(range(1, len(plainBlocks))):
+        #print(x)
+        cipherBlocks[x-1] = single_block_rec(cipherBlocks[x], plainBlocks[x], base_url)
+    iv = single_block_rec(cipherBlocks[0], plainBlocks[0], base_url)
+    #print(iv)
+    #print(cipherBlocks)
+    padding = pad(cipherBlocks[0],16)
+    #print(padding)
+    final = b''.join(cipherBlocks)
+    #print(final)
+    finalIV = b''.join([iv, final])
+    #print(finalIV)
+    finalIVPad = pad(finalIV, 16)
+    print(finalIVPad)
+    res = requests.get(f'{base_url}/quote/', cookies={'authtoken': finalIV.hex()})
+    print(f'[+] done:\n{res.text}')
+    print(len(finalIVPad))
 
-    
-    
+
 
 if __name__ == '__main__':
     if len(sys.argv) != 2:
