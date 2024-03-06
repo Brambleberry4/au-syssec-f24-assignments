@@ -22,7 +22,6 @@ def single_block_attack(block, base_url):
             padding_iv[-pad_val] = candidate
             iv = bytes(padding_iv)
             if oracle(iv, block, base_url):
-                print(candidate)
                 if pad_val == 1:
                     # make sure the padding really is of length 1 by changing
                     # the penultimate block and querying the oracle again
@@ -33,9 +32,7 @@ def single_block_attack(block, base_url):
                 break
         else:
             raise Exception("no valid padding byte found (is the oracle working correctly?)")
-        print('plain: ',zeroed_iv)
         zeroed_iv[-pad_val] = candidate ^ pad_val
-        print(zeroed_iv)
     return zeroed_iv
 
 def decAttack(base_url):
@@ -56,13 +53,23 @@ def decAttack(base_url):
         iv = x
     return result
 
+def single_block_rec(cBlock, pBlock, base_url):
+    cX = single_block_attack(cBlock, base_url)
+    return pBlock ^ cX 
+
 def encAttack(base_url):
-    newPlaintext = 'I should have used authenticated encryption because ... plain CBC is not secure!'
-    c4 = secrets.token_bytes(10)
-    c4 = pad(c4, 16)
-    print(c4)
-    print(len(c4))
+    newPlaintext = f'I should have used authenticated encryption because ... plain CBC is not secure!'.encode()
+    print(newPlaintext)
+    print(len(newPlaintext), type(newPlaintext))
+    plainBlocks = [newPlaintext[i:i+16] for i in range(0, len(newPlaintext), 16)]
+    print(len(plainBlocks), len(plainBlocks[0]))
+    for x in plainBlocks:
+        dec = single_block_attack()
+    c4 = secrets.token_bytes(16)
+    decC4 = single_block_rec(c4, base_url)
+    print(decC4).decode()
     return single_block_attack(c4, base_url)
+
     
     
 
@@ -73,4 +80,4 @@ if __name__ == '__main__':
     print(encAttack(sys.argv[1]))
     #print(type(encAttack(sys.argv[1])).decode())
     #print(type(decAttack(sys.argv[1])))
-    #print(decAttack(sys.argv[1]))
+    #print(decAttack(sys.argv[1]).decode())
