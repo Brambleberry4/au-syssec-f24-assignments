@@ -1,5 +1,46 @@
 \documentclass{article}
+\usepackage{graphicx} % Required for inserting images
+\usepackage{amsmath}
+\usepackage{amssymb}
+
+\title{Project 1 - CBC-padding oracle}
+\author{Felix Mölder - au737970}
+\date{February 2024}
 
 \begin{document}
-This is a file.
+
+\maketitle
+
+\section{obtain secret plaintext:}
+
+As a first step, we tried to understand the server structure and workflow. This was achieved by examine the given code of the server (main.py) and start the server locally and examine the behaviour in the browser. We found out that the server has two webpages:
+\begin{itemize}
+    \item[\textbf{index}] The index page responds with a cookie (authtoken) which describes the severs secret encrypted with AES-128 bit in CBC mode. 
+    \item[\textbf{quote}] The quote page responds with a quote \textbf{if} the authtoken sent in the request can be decrypted and the plaintext equals to the servers secret \textbf{or} responds with "No quote for you!" otherwise.   
+\end{itemize}
+The first task is to recover the servers secret (plaintext) from a given ciphertext by using a padding oracle. The idea works as follows:
+\begin{enumerate}
+    \item Obtain a ciphertext by requesting the index webpage.
+    \item Seperate the ciphertext into 128 bit blocks. The first block is the IV, the last block is filled up with padding.
+    \item Take a IV full of 0's. XOR the ith byte with the ith byte of the ciphertext decryption for all 256 possible values until the server responds with valid padding.
+    \item XOR the valid padding intermediate IV with the proper padding. For example for the last byte the proper padding ist 0x01 at the last byte and the rest 0. Save the result in the zeroing IV and decrease all IV bytes by 1.
+    \item Repeat step 3 and 4 until all bytes are found and thus the zeroing IV (the decrypted ciphertext block) is found.
+    \item Repeat step 1 to 5 until all ciphertext blocks are decrypted. 
+\end{enumerate}
+The source code can be found attached. After testing the outputs, we found out that only for one byte in step 3, the server responds with an utf-8 error. Thus our oracle tests if the responded text starts with "'utf" (utf-8 error) or "No" if the responds is "No quote for you". Together with the structure of the attack, we obtained the plaintext:\\
+"You never figure out that "I should have used authenticated encryption because ...". :)"
+
+\section{create new ciphertext:}
+
+The goal is to create a new ciphertext without knowing the key that can be decrypted properly. This can be especially interesting in the context of JSON Web tokens (JWTs) to authenticate yourself to an API. Due to the first part of this exercise, we are able to decrypt a ciphertext that was sent to us via the authtoken cookie. Now we can prepare a ciphertext that would lead to a specific plaintext without knowing the key. The idea is the following:
+\begin{enumerate}
+    \item Apply padding to the wanted plaintext and seperate it into $n$ 128-bit (16 bytes) blocks.
+    \item Choose random 16 bytes as final ciphertext block.
+    \item Ask the padding oracle to find the decrypted ciphertext.
+    \item XOR the decrypted ciphertext with the wanted plaintext block to obtain the necessary penultimate ciphertext block.
+    \item Repeat Step 2 and 3 until we obtain the IV as the first block.
+\end{enumerate}
+This algorithm gives us IV and $C_0, \dots , C_n$ such that the decryption would lead to $P_0, \dots , P_n$. If we send a request to the quote webpage with IV followed by the ciphertext blocks, the server decrypts the ciphertext leading to the prepared plaintext. If this plaintext is indeed the secret, the attacker authenticated against the server without knowing the secret key with a selfmade plaintext. 
+
+
 \end{document}

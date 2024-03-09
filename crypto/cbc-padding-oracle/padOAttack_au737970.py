@@ -1,23 +1,23 @@
 #!/usr/bin/env python3
 
 # CBC padding oracle attack
-# - lenerd
+# - Felix Mölder - au737970
 
 import requests
 import sys
 import secrets
-from Crypto.Util.Padding import pad, unpad
+from Crypto.Util.Padding import pad
 
 def oracle(iv, block, base_url):
+    #Found when the server responds eather utf-8 error or "No quote for you" answer
     res = requests.get(f'{base_url}/quote/', cookies={'authtoken': iv.hex() + block.hex()})
     return res.text.startswith("'utf") or res.text.startswith("No")
 
 def single_block_attack(block, base_url):
+    #decrypt a single block 
     zeroed_iv = [0] * 16
-
     for pad_val in range(1, 17):
         padding_iv = [pad_val ^ b for b in zeroed_iv]
-
         for candidate in range(256):
             padding_iv[-pad_val] = candidate
             iv = bytes(padding_iv)
@@ -60,40 +60,29 @@ def single_block_rec(cBlock, pBlock, base_url):
 
 def encAttack(base_url):
     newPlaintext = f'I should have used authenticated encryption because ... plain CBC is not secure!'.encode()
-    #print(newPlaintext)
-    #print(len(newPlaintext), type(newPlaintext))
+    #Seperate plaintext into blocks
     plainBlocks = [newPlaintext[i:i+16] for i in range(0, len(newPlaintext), 16)]
-    #print(len(plainBlocks), len(plainBlocks[0]))
     cipherBlocks = []
+    #Create a random ciphertext array
     for x in range(len(plainBlocks)):
         cipherBlocks.append(secrets.token_bytes(16))
-    print('Cipher:', cipherBlocks)
-    print('Plain:', plainBlocks)
+    #Iterate through the plaintext blocks 
     for x in reversed(range(1, len(plainBlocks))):
-        #print(x)
         cipherBlocks[x-1] = single_block_rec(cipherBlocks[x], plainBlocks[x], base_url)
+    #Set the final ciphertext block as the IV
     iv = single_block_rec(cipherBlocks[0], plainBlocks[0], base_url)
-    #print(iv)
-    #print(cipherBlocks)
-    padding = pad(cipherBlocks[0],16)
-    #print(padding)
     final = b''.join(cipherBlocks)
-    #print(final)
-    finalIV = b''.join([iv, final])
-    #print(finalIV)
-    finalIVPad = pad(finalIV, 16)
-    print(finalIVPad)
+    finalPad = pad(final, 16)
+    finalIV = b''.join([iv, finalPad])
     res = requests.get(f'{base_url}/quote/', cookies={'authtoken': finalIV.hex()})
     print(f'[+] done:\n{res.text}')
-    print(len(finalIVPad))
-
 
 
 if __name__ == '__main__':
     if len(sys.argv) != 2:
         print(f'usage: {sys.argv[0]} <base url>', file=sys.stderr)
         exit(1)
+    print('**********Padding oracle decryption**********')
+    print(decAttack(sys.argv[1]).decode())
+    print('**********Padding oracle encryption**********')
     print(encAttack(sys.argv[1]))
-    #print(type(encAttack(sys.argv[1])).decode())
-    #print(type(decAttack(sys.argv[1])))
-    #print(decAttack(sys.argv[1]).decode())
