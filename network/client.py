@@ -94,7 +94,7 @@ if __name__ == '__main__':
     print('****Secret channel activated****')
     inp = input('Enter information to send: ')
     cip = chunkAndEncrypt(bytes(inp, 'utf-8'))
-    print(cip)
+    #print(cip)
     checksum = 0
     id = os.getpid() & 0xFFFF
     header = struct.pack(
