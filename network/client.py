@@ -4,17 +4,9 @@ import socket
 import os
 import struct
 from Crypto.Cipher import AES
-
-encryption_key = b'\xdak5\xe8\x06\xd1\x9ctchX\xd9\x93\xa2\xa8C'
+from secret_client import cryptographic_key
 
 BLOCK_SIZE = 16
-
-# put in payload of ICMP package with header type 47
-# send
-
-def sending(x):
-    
-    return
 
 def calculate_checksum(source_string):
     """
@@ -57,16 +49,6 @@ def calculate_checksum(source_string):
 
     return answer
 
-
-def headerForPayload(ciphertext):
-    checksum = 0
-    own_id = os.getpid() & 0xFFFF
-    seq_number = 0
-    header = struct.pack(
-            "!BBHHH", 47, 0, checksum, own_id, seq_number
-        )
-    return header, own_id
-
 def chunkAndEncrypt(msg):
     # seperate message in 16 byte blocks
     def _pad(s: bytes):
@@ -74,18 +56,9 @@ def chunkAndEncrypt(msg):
     msg = _pad(msg)
     
     iv = bytes([0x00] * 16)
-    cipher = AES.new(encryption_key, AES.MODE_CBC, iv=iv)
+    cipher = AES.new(cryptographic_key, AES.MODE_CBC, iv=iv)
     ciphertext = cipher.encrypt(msg)
     return ciphertext
-
-def decrypt(ciphertext):
-    def _unpad(s):
-        return s[:-s[-1]]
-    
-    iv = bytes([0x00] * 16)
-    cipher = AES.new(encryption_key, AES.MODE_CBC, iv=iv)
-    plaintext = cipher.decrypt(ciphertext)
-    return _unpad(plaintext)
 
 if __name__ == '__main__':
     if len(sys.argv) != 2:
@@ -110,16 +83,3 @@ if __name__ == '__main__':
         icmp = socket.getprotobyname("icmp")
         mysocket = socket.socket(socket.AF_INET, socket.SOCK_RAW, icmp)
         mysocket.sendto(packet, (sys.argv[1], 1))
-
-    
-    #headerStump, id = headerForPayload(cip)
-    #print(headerStump)
-    #headAndData = headerStump + cip
-    #check = calculate_checksum(headAndData)
-    #icmp = socket.getprotobyname("icmp")
-    #mysocket = socket.socket(socket.AF_INET, socket.SOCK_RAW, icmp)
-    #header = struct.pack(
-    #    "BBHHH", 47, 0, socket.htons(check), id, 1
-    #)
-    #packet = header + cip
-    #mysocket.sendto(packet, (sys.argv[1],1))    
