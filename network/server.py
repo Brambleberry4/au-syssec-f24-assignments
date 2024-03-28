@@ -16,11 +16,14 @@ def decrypt(ciphertext):
 if __name__ == '__main__':
     s = socket.socket(socket.AF_INET,socket.SOCK_RAW,socket.IPPROTO_ICMP)
     s.setsockopt(socket.SOL_IP, socket.IP_HDRINCL, 1)
+    print('****Server started****')
+    print('Listen:...')
     while 1:
         recPacket, addr = s.recvfrom(1024)
+        sourceIP = socket.inet_ntoa(recPacket[12:16])
         icmp_header = recPacket[20:28]
         icmp_payload = recPacket[28:]
         type, code, checksum, p_id, sequence = struct.unpack('!BBHHH', icmp_header)
         if type == 47:
-            message = decrypt(icmp_payload)
-            print(message.decode())
+            plain = decrypt(icmp_payload)
+            print('Received from (' + sourceIP + '): ' + plain.decode())
