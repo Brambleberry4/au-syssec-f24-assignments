@@ -91,24 +91,25 @@ if __name__ == '__main__':
     if len(sys.argv) != 2:
         print(f'usage: {sys.argv[0]} <base url>', file=sys.stderr)
         exit(1)
-    print('****Secret channel activated****')
-    inp = input('Enter information to send: ')
-    cip = chunkAndEncrypt(bytes(inp, 'utf-8'))
-    #print(cip)
-    checksum = 0
-    id = os.getpid() & 0xFFFF
-    header = struct.pack(
-        "!BBHHH", 47, 0, checksum, id, 0
-    )
-    check = calculate_checksum(header + cip)
+    while 1:
+        print('****Secret channel activated****')
+        inp = input('Enter information to send: ')
+        cip = chunkAndEncrypt(bytes(inp, 'utf-8'))
+        #print(cip)
+        checksum = 0
+        id = os.getpid() & 0xFFFF
+        header = struct.pack(
+            "!BBHHH", 47, 0, checksum, id, 0
+        )
+        check = calculate_checksum(header + cip)
 
-    propHeader = struct.pack(
-        "!BBHHH", 47, 0, check, id, 0
-    )
-    packet = propHeader + cip
-    icmp = socket.getprotobyname("icmp")
-    mysocket = socket.socket(socket.AF_INET, socket.SOCK_RAW, icmp)
-    mysocket.sendto(packet, (sys.argv[1], 1))
+        propHeader = struct.pack(
+            "!BBHHH", 47, 0, check, id, 0
+        )
+        packet = propHeader + cip
+        icmp = socket.getprotobyname("icmp")
+        mysocket = socket.socket(socket.AF_INET, socket.SOCK_RAW, icmp)
+        mysocket.sendto(packet, (sys.argv[1], 1))
 
     
     #headerStump, id = headerForPayload(cip)

@@ -30,6 +30,3 @@ while 1:
         #print(icmp_payload)
         message = decrypt(icmp_payload)
         print(message.decode())
-        
-
-        #print("type: [" + str(type) + "] code: [" + str(code) + "] checksum: [" + str(checksum) + "] p_id: [" + str(p_id) + "] sequence: [" + str(sequence) + "]")
