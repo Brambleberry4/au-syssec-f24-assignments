@@ -12,7 +12,6 @@ def decrypt(ciphertext):
     plaintext = cipher.decrypt(ciphertext)
     return _unpad(plaintext)
 
-
 if __name__ == '__main__':
     s = socket.socket(socket.AF_INET,socket.SOCK_RAW,socket.IPPROTO_ICMP)
     s.setsockopt(socket.SOL_IP, socket.IP_HDRINCL, 1)
