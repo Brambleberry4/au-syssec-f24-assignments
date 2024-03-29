@@ -1,4 +1,3 @@
-# 1. argument: ip address of destination host
 import sys
 import socket
 import os
@@ -10,10 +9,7 @@ BLOCK_SIZE = 16
 
 def calculate_checksum(source_string):
     """
-    A port of the functionality of in_cksum() from ping.c
-    Ideally this would act on the string as a series of 16-bit ints (host
-    packed), but this works.
-    Network data is big-endian, hosts are typically little-endian
+    function given by https://github.com/00dhkim/icmp-tunneling-tool/blob/master/pyping/core.py to calculate the checksum of a given packet
     """
     countTo = (int(len(source_string) / 2)) * 2
     sum = 0
@@ -50,36 +46,39 @@ def calculate_checksum(source_string):
     return answer
 
 def chunkAndEncrypt(msg):
-    # seperate message in 16 byte blocks
+    # function to pad the message and encrypt with given Algorithm and key
     def _pad(s: bytes):
         return s + (BLOCK_SIZE - len(s) % BLOCK_SIZE) * chr(BLOCK_SIZE - len(s) % BLOCK_SIZE).encode('utf-8')
     msg = _pad(msg)
-    
     iv = bytes([0x00] * 16)
     cipher = AES.new(cryptographic_key, AES.MODE_CBC, iv=iv)
-    ciphertext = cipher.encrypt(msg)
-    return ciphertext
-
+    return cipher.encrypt(msg)
+    
 if __name__ == '__main__':
     if len(sys.argv) != 2:
+        # first argument needs to be an IP address
         print(f'usage: {sys.argv[0]} <base url>', file=sys.stderr)
         exit(1)
+
     while 1:
         print('****Secret channel activated****')
         inp = input('Enter information to send: ')
-        cip = chunkAndEncrypt(bytes(inp, 'utf-8'))
-        #print(cip)
+        # encrypt input
+        ciphertext = chunkAndEncrypt(bytes(inp, 'utf-8'))
+        # compute checksum for given ciphertext
         checksum = 0
+        # get the id of the current process
         id = os.getpid() & 0xFFFF
-        header = struct.pack(
+        dummy_header = struct.pack(
             "!BBHHH", 47, 0, checksum, id, 0
         )
-        check = calculate_checksum(header + cip)
-
-        propHeader = struct.pack(
+        check = calculate_checksum(dummy_header + ciphertext)
+        header = struct.pack(
             "!BBHHH", 47, 0, check, id, 0
         )
-        packet = propHeader + cip
+        # create packet
+        packet = header + ciphertext
+        # create socket and send packet to IP address
         icmp = socket.getprotobyname("icmp")
         mysocket = socket.socket(socket.AF_INET, socket.SOCK_RAW, icmp)
         mysocket.sendto(packet, (sys.argv[1], 1))
